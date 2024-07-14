@@ -63,7 +63,7 @@ HyperTune uses a combination of natural language processing techniques and machi
 
 ![word_frequency](https://github.com/user-attachments/assets/e0cd3271-78d3-406e-98a6-b39e75205dbf)
 
-![score_comparison](https://github.com/user-attachments/assets/ef88e11c-39ed-4b6b-877b-608871fecde4)
+![score_comparison](https://github.com/user-attachments/assets/e6ad5ace-2632-404f-99c7-c50a88d328f7)
 
 
 ## Contributing
