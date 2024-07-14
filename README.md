@@ -59,6 +59,13 @@ HyperTune uses a combination of natural language processing techniques and machi
 3. The tool then analyzes the responses collectively to identify common themes, unique insights, and the impact of different hyperparameters.
 4. Finally, it provides a comprehensive report with visualizations to help understand the results.
 
+![hyperparameter_impact](https://github.com/user-attachments/assets/73490098-4333-479f-9b3f-094944b34acd)
+
+![word_frequency](https://github.com/user-attachments/assets/e0cd3271-78d3-406e-98a6-b39e75205dbf)
+
+![score_comparison](https://github.com/user-attachments/assets/ef88e11c-39ed-4b6b-877b-608871fecde4)
+
+
 ## Contributing
 
 Contributions to HyperTune are welcome! Please feel free to submit a PR.
