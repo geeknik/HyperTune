@@ -1,4 +1,6 @@
-import openai
+from openai import OpenAI
+
+client = OpenAI()
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -25,19 +27,17 @@ class HyperTune:
             frequency_penalty = round(random.uniform(0.0, 2.0), 2)
             presence_penalty = round(random.uniform(0.0, 2.0), 2)
 
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": self.prompt}
-                ],
-                temperature=temperature,
-                top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty
-            )
+            response = client.chat.completions.create(model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": self.prompt}
+            ],
+            temperature=temperature,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty)
             results.append({
-                'text': response['choices'][0]['message']['content'],
+                'text': response.choices[0].message.content,
                 'hyperparameters': {
                     'temperature': temperature,
                     'top_p': top_p,
