@@ -77,7 +77,7 @@ class TestHyperTune:
         ht = HyperTune("Test", iterations=1)
         score = ht.evaluate_coherence("Single sentence.")
 
-        assert score == 0
+        assert score == 1.0
 
     @patch("hypertune.core.ProviderFactory")
     def test_evaluate_coherence_multiple_sentences(self, mock_factory):

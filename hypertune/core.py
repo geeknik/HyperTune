@@ -1,15 +1,27 @@
+import math
+import random
+import string
+
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
-import string
-import random
+from sentence_transformers import SentenceTransformer
 from .providers import ProviderFactory
 
 nltk.download("punkt", quiet=True)
 nltk.download("stopwords", quiet=True)
+nltk.download("punkt_tab", quiet=True)
+
+_embedding_model = None
+
+
+def get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _embedding_model
 
 
 class HyperTune:
@@ -119,76 +131,84 @@ class HyperTune:
 
     def evaluate_coherence(self, text):
         if not text or not text.strip():
-            return 0
+            return 0.0
 
         sentences = sent_tokenize(text)
         if len(sentences) < 2:
-            return 0
+            return 1.0
 
-        sentence_vectors = []
-        for sentence in sentences:
-            words = [
-                w.lower()
-                for w in word_tokenize(sentence)
-                if w.lower() not in self.stop_words
-            ]
-            sentence_vectors.append(" ".join(words))
+        model = get_embedding_model()
+        embeddings = model.encode(sentences)
 
-        non_empty_vectors = [v for v in sentence_vectors if v.strip()]
-        if len(non_empty_vectors) < 2:
-            return 0
+        similarities = []
+        for i in range(len(embeddings) - 1):
+            sim = cosine_similarity([embeddings[i]], [embeddings[i + 1]])[0][0]
+            similarities.append(sim)
 
-        try:
-            vectorizer = TfidfVectorizer()
-            tfidf_matrix = vectorizer.fit_transform(sentence_vectors)
-            coherence_scores = []
-            for i in range(len(sentences) - 1):
-                coherence_scores.append(
-                    cosine_similarity(tfidf_matrix[i], tfidf_matrix[i + 1])[0][0]
-                )
-            return np.mean(coherence_scores) if coherence_scores else 0
-        except ValueError:
-            return 0
+        if not similarities:
+            return 0.0
+
+        raw_score = float(np.mean(similarities))
+        return self._calibrate_coherence(raw_score)
+
+    def _calibrate_coherence(self, raw_score):
+        baseline = 0.3
+        ceiling = 0.85
+        if raw_score <= baseline:
+            return 0.0
+        if raw_score >= ceiling:
+            return 1.0
+        return (raw_score - baseline) / (ceiling - baseline)
 
     def evaluate_relevance(self, text, prompt):
         if not text or not text.strip() or not prompt or not prompt.strip():
-            return 0
+            return 0.0
 
-        try:
-            vectorizer = TfidfVectorizer()
-            tfidf_matrix = vectorizer.fit_transform([prompt, text])
-            return cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0]
-        except ValueError:
-            return 0
+        model = get_embedding_model()
+        embeddings = model.encode([prompt, text])
+        raw_score = float(cosine_similarity([embeddings[0]], [embeddings[1]])[0][0])
+        return self._calibrate_relevance(raw_score)
+
+    def _calibrate_relevance(self, raw_score):
+        baseline = 0.2
+        ceiling = 0.75
+        if raw_score <= baseline:
+            return 0.0
+        if raw_score >= ceiling:
+            return 1.0
+        return (raw_score - baseline) / (ceiling - baseline)
 
     def evaluate_complexity(self, text):
         if not text or not text.strip():
-            return 0
+            return 0.0
 
         words = word_tokenize(text.lower())
         words = [word for word in words if word not in string.punctuation]
 
         if not words:
-            return 0
+            return 0.0
+
+        sentences = sent_tokenize(text)
+        if not sentences:
+            return 0.0
 
         avg_word_length = np.mean([len(word) for word in words])
-        unique_words_ratio = len(set(words)) / len(words)
-        sentences = sent_tokenize(text)
+        word_length_score = self._sigmoid_normalize(avg_word_length, midpoint=5, k=0.8)
 
-        if not sentences:
-            return 0
+        unique_ratio = len(set(words)) / len(words)
+        vocab_score = self._sigmoid_normalize(unique_ratio, midpoint=0.4, k=8)
 
         avg_sentence_length = np.mean(
             [len(word_tokenize(sentence)) for sentence in sentences]
         )
-        norm_word_length = min(avg_word_length / 10, 1)
-        norm_sentence_length = min(avg_sentence_length / 30, 1)
-        complexity_score = (
-            norm_word_length * 0.3
-            + unique_words_ratio * 0.3
-            + norm_sentence_length * 0.4
+        sentence_score = self._sigmoid_normalize(
+            avg_sentence_length, midpoint=15, k=0.15
         )
-        return complexity_score
+
+        return word_length_score * 0.25 + vocab_score * 0.35 + sentence_score * 0.40
+
+    def _sigmoid_normalize(self, value, midpoint, k):
+        return 1 / (1 + math.exp(-k * (value - midpoint)))
 
     def run(self):
         results = self.generate()
