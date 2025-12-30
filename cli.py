@@ -97,16 +97,53 @@ def plot_hyperparameter_impact(results):
 
 def main():
     parser = argparse.ArgumentParser(description="HyperTune CLI")
-    parser.add_argument("--prompt", required=True, help="Input prompt")
+    parser.add_argument("--prompt", help="Input prompt")
     parser.add_argument("--iterations", type=int, default=5, help="Number of iterations")
+    parser.add_argument("--provider", default="openai",
+                       choices=["openai", "anthropic", "gemini", "openrouter"],
+                       help="LLM provider to use (default: openai)")
+    parser.add_argument("--model", help="Specific model to use (optional, uses provider default)")
+    parser.add_argument("--list-providers", action="store_true",
+                       help="List all available providers and their models")
+    
     args = parser.parse_args()
+    
+    # List providers if requested
+    if args.list_providers:
+        from hypertune.providers import ProviderFactory
+        print("Available LLM Providers:")
+        print("=" * 50)
+        
+        all_info = ProviderFactory.list_all_provider_info()
+        for provider_name, info in all_info.items():
+            if 'error' in info:
+                print(f"\n{provider_name.upper()}: {info['error']}")
+                continue
+                
+            print(f"\n{provider_name.upper()}:")
+            print(f"  Default model: {info['model']}")
+            print(f"  Available models:")
+            for model in info['available_models']:
+                print(f"    - {model}")
+            
+            print(f"  Parameter ranges:")
+            for param, ranges in info['parameter_ranges'].items():
+                print(f"    {param}: {ranges['min']} - {ranges['max']}")
+        return
+    
+    # Check if prompt is provided when not listing providers
+    if not args.prompt:
+        parser.error("--prompt is required when not using --list-providers")
 
-    ht = HyperTune(args.prompt, args.iterations)
+    ht = HyperTune(args.prompt, args.iterations, args.provider, args.model)
     results = ht.run()
     
     print("HyperTune Analysis:")
     print(f"\nPrompt: '{args.prompt}'")
     print(f"Number of iterations: {args.iterations}")
+    print(f"Provider: {args.provider}")
+    if args.model:
+        print(f"Model: {args.model}")
     
     print("\nTop 3 Responses (by score):")
     for i, result in enumerate(results[:3], 1):

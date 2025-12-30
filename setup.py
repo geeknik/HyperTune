@@ -4,18 +4,25 @@ from setuptools import setup, find_packages
 
 setup(
     name="hypertune",
-    version="0.1",
+    version="0.2",
     packages=find_packages(),
     install_requires=[
         'openai',
+        'anthropic',
+        'google-generativeai',
         'click',
         'nltk',
         'scikit-learn',
         'sentence-transformers',
+        'matplotlib',
+        'seaborn',
+        'tabulate',
+        'pandas',
+        'numpy',
     ],
     entry_points={
         'console_scripts': [
-            'hypertune=cli:run',
+            'hypertune=cli:main',
         ],
     },
 )

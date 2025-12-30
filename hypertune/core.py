@@ -1,6 +1,3 @@
-from openai import OpenAI
-
-client = OpenAI()
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -9,42 +6,81 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 import string
 import random
+from .providers import ProviderFactory
 
 nltk.download('punkt', quiet=True)
 nltk.download('stopwords', quiet=True)
 
 class HyperTune:
-    def __init__(self, prompt, iterations):
+    def __init__(self, prompt, iterations, provider="openai", model=None):
+        """
+        Initialize HyperTune with specified provider
+        
+        Args:
+            prompt: The prompt to generate responses for
+            iterations: Number of iterations to run
+            provider: LLM provider to use (openai, anthropic, gemini, openrouter)
+            model: Specific model to use (optional, uses provider default if None)
+        """
         self.prompt = prompt
         self.iterations = iterations
         self.stop_words = set(stopwords.words('english'))
+        self.provider = ProviderFactory.create_provider(provider, model)
 
     def generate(self):
+        """
+        Generate responses using the configured provider
+        
+        Returns:
+            List of results with text and hyperparameters
+        """
         results = []
+        parameter_ranges = self.provider.get_parameter_ranges()
+        
         for _ in range(self.iterations):
-            temperature = round(random.uniform(0.1, 1.0), 2)
-            top_p = round(random.uniform(0.1, 1.0), 2)
-            frequency_penalty = round(random.uniform(0.0, 2.0), 2)
-            presence_penalty = round(random.uniform(0.0, 2.0), 2)
-
-            response = client.chat.completions.create(model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": self.prompt}
-            ],
-            temperature=temperature,
-            top_p=top_p,
-            frequency_penalty=frequency_penalty,
-            presence_penalty=presence_penalty)
-            results.append({
-                'text': response.choices[0].message.content,
-                'hyperparameters': {
-                    'temperature': temperature,
-                    'top_p': top_p,
-                    'frequency_penalty': frequency_penalty,
-                    'presence_penalty': presence_penalty
-                }
-            })
+            # Generate random hyperparameters within provider's valid ranges
+            hyperparameters = {}
+            
+            # Temperature
+            if 'temperature' in parameter_ranges:
+                temp_range = parameter_ranges['temperature']
+                hyperparameters['temperature'] = round(random.uniform(temp_range['min'], temp_range['max']), 2)
+            
+            # Top_p
+            if 'top_p' in parameter_ranges:
+                top_p_range = parameter_ranges['top_p']
+                hyperparameters['top_p'] = round(random.uniform(top_p_range['min'], top_p_range['max']), 2)
+            
+            # Provider-specific parameters
+            if 'frequency_penalty' in parameter_ranges:
+                freq_range = parameter_ranges['frequency_penalty']
+                hyperparameters['frequency_penalty'] = round(random.uniform(freq_range['min'], freq_range['max']), 2)
+            
+            if 'presence_penalty' in parameter_ranges:
+                pres_range = parameter_ranges['presence_penalty']
+                hyperparameters['presence_penalty'] = round(random.uniform(pres_range['min'], pres_range['max']), 2)
+            
+            if 'top_k' in parameter_ranges:
+                top_k_range = parameter_ranges['top_k']
+                hyperparameters['top_k'] = random.randint(int(top_k_range['min']), int(top_k_range['max']))
+            
+            # Max tokens
+            if 'max_tokens' in parameter_ranges:
+                max_tokens_range = parameter_ranges['max_tokens']
+                hyperparameters['max_tokens'] = random.randint(int(max_tokens_range['min']), min(1024, int(max_tokens_range['max'])))
+            
+            # Generate response using provider
+            try:
+                response_text = self.provider.generate(self.prompt, **hyperparameters)
+                results.append({
+                    'text': response_text,
+                    'hyperparameters': hyperparameters
+                })
+            except Exception as e:
+                print(f"Error generating response: {e}")
+                # Continue with next iteration
+                continue
+                
         return results
 
     def score(self, results):
