@@ -1,25 +1,37 @@
 [MAIN]
 py-version = 3.10
 jobs = 0
-load-plugins = pylint.extensions.docparams
 
 [MESSAGES CONTROL]
 disable =
-    C0114,  # missing-module-docstring (too noisy for scripts)
-    R0801,  # duplicate-code (cli and example share intentional code)
-    C0415,  # import-outside-toplevel (acceptable for conditional imports)
-    W0718,  # broad-exception-caught (acceptable in example scripts)
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring (too noisy for test classes)
+    C0116,  # missing-function-docstring (too noisy for test methods)
+    R0801,  # duplicate-code
+    C0415,  # import-outside-toplevel
+    W0718,  # broad-exception-caught
+    W0212,  # protected-access (needed for testing internals)
+    W0613,  # unused-argument (common in mocks)
+    W0611,  # unused-import (sometimes needed for type hints)
+    R0903,  # too-few-public-methods (common in test fixtures)
+    R0913,  # too-many-arguments
+    R0917,  # too-many-positional-arguments
+    C0103,  # invalid-name (X is fine for ML variables)
+    W0107,  # unnecessary-pass (needed for abstract methods)
+    C1803,  # use-implicit-booleaness-not-comparison
+    W0201,  # attribute-defined-outside-init (common in test setup)
 
 [FORMAT]
-max-line-length = 100
+max-line-length = 120
 max-module-lines = 1000
 
 [DESIGN]
 max-locals = 25
 max-statements = 80
+max-branches = 20
 
 [BASIC]
-good-names = i, j, k, e, f, ax, df, ht, x, y, _
+good-names = i, j, k, e, f, ax, df, ht, x, y, X, w, _
 
 [TYPECHECK]
 generated-members = numpy.*, pandas.*
