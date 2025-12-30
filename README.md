@@ -14,15 +14,16 @@ HyperTune is an advanced tool for optimizing and analyzing text generation using
 ## Supported Providers
 
 ### OpenAI
-- Models: GPT-4o, GPT-4o-mini, GPT-4, GPT-4-turbo, GPT-3.5-turbo
+- Models: GPT-5.2, GPT-5.2-pro, GPT-5, GPT-5-mini, GPT-5-nano, GPT-4.1
+- Open-weight: gpt-oss-120b, gpt-oss-20b
 - Parameters: temperature, top_p, max_tokens, frequency_penalty, presence_penalty
 
 ### Anthropic Claude
-- Models: Claude-3.5-Sonnet, Claude-3.5-Haiku, Claude-3-Opus, Claude-3-Sonnet, Claude-3-Haiku
+- Models: Claude Opus 4.5, Claude Sonnet 4.5, Claude Haiku 4.5
 - Parameters: temperature, top_p, max_tokens
 
 ### Google Gemini
-- Models: Gemini-1.5-Pro, Gemini-1.5-Flash, Gemini-1.0-Pro, Gemini-Pro-Vision
+- Models: Gemini 3 Pro, Gemini 3 Flash, Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash-Lite
 - Parameters: temperature, top_p, max_tokens, top_k
 
 ### OpenRouter
@@ -105,7 +106,7 @@ The script also generates several visualization charts:
 
 HyperTune uses a combination of natural language processing techniques and machine learning to generate and analyze text responses:
 
-1. It generates multiple responses using OpenAI's GPT model with varying hyperparameters.
+1. It generates multiple responses using your chosen LLM provider with varying hyperparameters.
 2. Each response is scored based on coherence, relevance to the prompt, and language complexity.
 3. The tool then analyzes the responses collectively to identify common themes, unique insights, and the impact of different hyperparameters.
 4. Finally, it provides a comprehensive report with visualizations to help understand the results.
@@ -127,4 +128,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Disclaimer
 
-This tool interacts with OpenAI's GPT models. The authors are not responsible for any misuse or for any offensive content that may be generated.
+This tool interacts with various LLM provider APIs. The authors are not responsible for any misuse or for any offensive content that may be generated.
