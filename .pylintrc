@@ -1,0 +1,25 @@
+[MAIN]
+py-version = 3.10
+jobs = 0
+load-plugins = pylint.extensions.docparams
+
+[MESSAGES CONTROL]
+disable =
+    C0114,  # missing-module-docstring (too noisy for scripts)
+    R0801,  # duplicate-code (cli and example share intentional code)
+    C0415,  # import-outside-toplevel (acceptable for conditional imports)
+    W0718,  # broad-exception-caught (acceptable in example scripts)
+
+[FORMAT]
+max-line-length = 100
+max-module-lines = 1000
+
+[DESIGN]
+max-locals = 25
+max-statements = 80
+
+[BASIC]
+good-names = i, j, k, e, f, ax, df, ht, x, y, _
+
+[TYPECHECK]
+generated-members = numpy.*, pandas.*

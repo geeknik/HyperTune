@@ -1,4 +1,4 @@
-# setup.py
+"""HyperTune package setup configuration."""
 
 from setuptools import setup, find_packages
 
@@ -7,22 +7,22 @@ setup(
     version="0.2",
     packages=find_packages(),
     install_requires=[
-        'openai',
-        'anthropic',
-        'google-generativeai',
-        'click',
-        'nltk',
-        'scikit-learn',
-        'sentence-transformers',
-        'matplotlib',
-        'seaborn',
-        'tabulate',
-        'pandas',
-        'numpy',
+        "openai",
+        "anthropic",
+        "google-generativeai",
+        "click",
+        "nltk",
+        "scikit-learn",
+        "sentence-transformers",
+        "matplotlib",
+        "seaborn",
+        "tabulate",
+        "pandas",
+        "numpy",
     ],
     entry_points={
-        'console_scripts': [
-            'hypertune=cli:main',
+        "console_scripts": [
+            "hypertune=cli:main",
         ],
     },
 )
