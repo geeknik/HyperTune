@@ -103,7 +103,7 @@ class OpenRouterProvider(BaseProvider):
         Returns:
             Default model name
         """
-        return "anthropic/claude-3.5-sonnet"
+        return "anthropic/claude-sonnet-4.5"
 
     def get_available_models(self) -> List[str]:
         """
@@ -115,30 +115,38 @@ class OpenRouterProvider(BaseProvider):
         """
         return [
             # Anthropic models
+            "anthropic/claude-opus-4.5",
+            "anthropic/claude-sonnet-4.5",
+            "anthropic/claude-haiku-4.5",
             "anthropic/claude-3.5-sonnet",
-            "anthropic/claude-3-opus",
-            "anthropic/claude-3-sonnet",
-            "anthropic/claude-3-haiku",
             # OpenAI models
+            "openai/gpt-5.2",
+            "openai/gpt-5.2-pro",
+            "openai/gpt-5",
+            "openai/gpt-5-mini",
+            "openai/gpt-5-nano",
+            "openai/gpt-4.1",
             "openai/gpt-4o",
-            "openai/gpt-4o-mini",
-            "openai/gpt-4-turbo",
-            "openai/gpt-3.5-turbo",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
             # Google models
-            "google/gemini-pro-1.5",
-            "google/gemini-flash-1.5",
+            "google/gemini-3-pro",
+            "google/gemini-3-flash",
+            "google/gemini-2.5-pro",
+            "google/gemini-2.5-flash",
             # Meta models
+            "meta-llama/llama-4-405b-instruct",
+            "meta-llama/llama-4-70b-instruct",
             "meta-llama/llama-3.1-405b-instruct",
-            "meta-llama/llama-3.1-70b-instruct",
-            "meta-llama/llama-3.1-8b-instruct",
             # Mistral models
-            "mistralai/mistral-large",
-            "mistralai/mistral-medium",
-            "mistralai/mistral-small",
+            "mistralai/mistral-large-2",
+            "mistralai/mistral-medium-2",
+            "mistralai/codestral",
             # Other popular models
-            "cohere/command-r-plus",
-            "perplexity/llama-3.1-sonar-large-128k-online",
-            "qwen/qwen-2.5-72b-instruct",
+            "cohere/command-r-plus-2",
+            "perplexity/sonar-pro",
+            "qwen/qwen-3-72b-instruct",
+            "deepseek/deepseek-r1",
         ]
 
     def _validate_provider_specific_params(self, **hyperparameters) -> Dict[str, Any]:

@@ -10,7 +10,7 @@ class TestOpenAIProvider:
         from hypertune.providers.openai_provider import OpenAIProvider
 
         provider = OpenAIProvider()
-        assert provider.model == "gpt-4o"
+        assert provider.model == "gpt-5"
 
     @patch("hypertune.providers.openai_provider.OpenAI")
     def test_init_custom_model(self, mock_openai):
@@ -55,9 +55,9 @@ class TestOpenAIProvider:
 
         provider = OpenAIProvider()
         models = provider.get_available_models()
+        assert "gpt-5" in models
+        assert "gpt-5.2" in models
         assert "gpt-4o" in models
-        assert "gpt-4o-mini" in models
-        assert "gpt-3.5-turbo" in models
 
     @patch("hypertune.providers.openai_provider.OpenAI")
     def test_get_parameter_ranges(self, mock_openai):
@@ -96,7 +96,7 @@ class TestOpenRouterProvider:
         from hypertune.providers.openrouter_provider import OpenRouterProvider
 
         provider = OpenRouterProvider()
-        assert provider.model == "anthropic/claude-3.5-sonnet"
+        assert provider.model == "anthropic/claude-sonnet-4.5"
 
     @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
     @patch("hypertune.providers.openrouter_provider.OpenAI")
@@ -288,7 +288,7 @@ class TestAnthropicProvider:
         from hypertune.providers.anthropic_provider import AnthropicProvider
 
         provider = AnthropicProvider()
-        assert provider.model == "claude-3-5-sonnet-20241022"
+        assert provider.model == "claude-sonnet-4.5"
 
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"})
     @patch("hypertune.providers.anthropic_provider.Anthropic")
@@ -334,7 +334,7 @@ class TestGeminiProvider:
     def test_get_default_model(self):
         from hypertune.providers.gemini_provider import GeminiProvider
 
-        assert GeminiProvider.get_default_model(None) == "gemini-1.5-pro"
+        assert GeminiProvider.get_default_model(None) == "gemini-2.5-pro"
 
     def test_get_available_models_static(self):
         from hypertune.providers.gemini_provider import GeminiProvider
