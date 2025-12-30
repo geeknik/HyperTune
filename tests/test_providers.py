@@ -132,6 +132,154 @@ class TestOpenRouterProvider:
             with pytest.raises(ValueError, match="OPENROUTER_API_KEY"):
                 OpenRouterProvider()
 
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_get_parameter_ranges_includes_new_params(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        ranges = provider.get_parameter_ranges()
+        assert "top_k" in ranges
+        assert "repetition_penalty" in ranges
+        assert "min_p" in ranges
+        assert "top_a" in ranges
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_validate_top_k_valid(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        result = provider._validate_provider_specific_params(top_k=50)
+        assert result["top_k"] == 50
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_validate_top_k_invalid(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = provider._validate_provider_specific_params(top_k=-5)
+            assert "top_k" not in result
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_validate_repetition_penalty_valid(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        result = provider._validate_provider_specific_params(repetition_penalty=1.5)
+        assert result["repetition_penalty"] == 1.5
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_validate_repetition_penalty_invalid(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = provider._validate_provider_specific_params(repetition_penalty=3.0)
+            assert "repetition_penalty" not in result
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_validate_min_p_valid(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        result = provider._validate_provider_specific_params(min_p=0.1)
+        assert result["min_p"] == 0.1
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_validate_min_p_invalid(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = provider._validate_provider_specific_params(min_p=1.5)
+            assert "min_p" not in result
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_validate_top_a_valid(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        result = provider._validate_provider_specific_params(top_a=0.5)
+        assert result["top_a"] == 0.5
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_validate_top_a_invalid(self, mock_openai):
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = provider._validate_provider_specific_params(top_a=-0.1)
+            assert "top_a" not in result
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_generate_with_extra_params(self, mock_openai):
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Response"
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_openai.return_value = mock_client
+
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        provider.generate(
+            "Test", top_k=50, min_p=0.1, repetition_penalty=1.2, top_a=0.3
+        )
+
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+        assert call_kwargs["extra_body"]["top_k"] == 50
+        assert call_kwargs["extra_body"]["min_p"] == 0.1
+        assert call_kwargs["extra_body"]["repetition_penalty"] == 1.2
+        assert call_kwargs["extra_body"]["top_a"] == 0.3
+
+    @patch.dict("os.environ", {"OPENROUTER_API_KEY": "test-key"})
+    @patch("hypertune.providers.openrouter_provider.OpenAI")
+    def test_temperature_clamping_on_provider_error(self, mock_openai):
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Response after retry"
+
+        error_msg = (
+            'Error code: 400 - {"error":{"message":"Provider returned error",'
+            '"metadata":{"raw":"{\\"error\\":{\\"param\\":\\"temperature must be '
+            'within [0, 1.5]\\"}}","provider_name":"Xiaomi"}}}'
+        )
+        mock_client.chat.completions.create.side_effect = [
+            Exception(error_msg),
+            mock_response,
+        ]
+        mock_openai.return_value = mock_client
+
+        from hypertune.providers.openrouter_provider import OpenRouterProvider
+
+        provider = OpenRouterProvider()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = provider.generate("Test", temperature=1.8)
+            assert result == "Response after retry"
+            assert len(w) == 1
+            assert "Clamping 1.8 to 1.5" in str(w[0].message)
+
+        assert mock_client.chat.completions.create.call_count == 2
+        second_call = mock_client.chat.completions.create.call_args_list[1][1]
+        assert second_call["temperature"] == 1.5
+
 
 class TestAnthropicProvider:
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key"})

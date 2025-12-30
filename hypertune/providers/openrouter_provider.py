@@ -3,6 +3,7 @@ OpenRouter provider for HyperTune
 """
 
 import os
+import re
 from typing import Dict, Any, List
 import warnings
 from .base import BaseProvider
@@ -41,6 +42,28 @@ class OpenRouterProvider(BaseProvider):
         """
         validated_params = self.validate_hyperparameters(**hyperparameters)
 
+        extra_body = {}
+        if "top_k" in validated_params:
+            extra_body["top_k"] = validated_params["top_k"]
+        if "repetition_penalty" in validated_params:
+            extra_body["repetition_penalty"] = validated_params["repetition_penalty"]
+        if "min_p" in validated_params:
+            extra_body["min_p"] = validated_params["min_p"]
+        if "top_a" in validated_params:
+            extra_body["top_a"] = validated_params["top_a"]
+
+        temperature = validated_params.get("temperature", 0.7)
+
+        return self._call_api(prompt, validated_params, extra_body, temperature)
+
+    def _call_api(
+        self,
+        prompt: str,
+        validated_params: Dict[str, Any],
+        extra_body: Dict[str, Any],
+        temperature: float,
+        retry: bool = True,
+    ) -> str:
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -48,15 +71,30 @@ class OpenRouterProvider(BaseProvider):
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt},
                 ],
-                temperature=validated_params.get("temperature", 0.7),
+                temperature=temperature,
                 top_p=validated_params.get("top_p", 0.9),
                 max_tokens=validated_params.get("max_tokens", 1024),
                 frequency_penalty=validated_params.get("frequency_penalty", 0.0),
                 presence_penalty=validated_params.get("presence_penalty", 0.0),
+                extra_body=extra_body if extra_body else None,
             )
             return response.choices[0].message.content
         except Exception as e:
-            raise RuntimeError(f"OpenRouter API error: {str(e)}")
+            error_str = str(e)
+            if retry and "temperature must be within" in error_str:
+                match = re.search(
+                    r"temperature must be within \[[\d.]+,\s*([\d.]+)\]", error_str
+                )
+                if match:
+                    max_temp = float(match.group(1))
+                    clamped_temp = min(temperature, max_temp)
+                    warnings.warn(
+                        f"Provider temperature limit exceeded. Clamping {temperature} to {clamped_temp}"
+                    )
+                    return self._call_api(
+                        prompt, validated_params, extra_body, clamped_temp, retry=False
+                    )
+            raise RuntimeError(f"OpenRouter API error: {error_str}")
 
     def get_default_model(self) -> str:
         """
@@ -145,6 +183,44 @@ class OpenRouterProvider(BaseProvider):
             else:
                 validated["presence_penalty"] = pres_penalty
 
+        # top_k: 0 or above (0 disables)
+        if "top_k" in hyperparameters:
+            top_k = hyperparameters["top_k"]
+            if not isinstance(top_k, int) or top_k < 0:
+                warnings.warn(f"Invalid top_k value: {top_k}. Skipping parameter.")
+            else:
+                validated["top_k"] = top_k
+
+        # repetition_penalty: 0.0 to 2.0
+        if "repetition_penalty" in hyperparameters:
+            rep_penalty = hyperparameters["repetition_penalty"]
+            if (
+                not isinstance(rep_penalty, (int, float))
+                or rep_penalty < 0.0
+                or rep_penalty > 2.0
+            ):
+                warnings.warn(
+                    f"Invalid repetition_penalty value: {rep_penalty}. Skipping parameter."
+                )
+            else:
+                validated["repetition_penalty"] = rep_penalty
+
+        # min_p: 0.0 to 1.0
+        if "min_p" in hyperparameters:
+            min_p = hyperparameters["min_p"]
+            if not isinstance(min_p, (int, float)) or min_p < 0.0 or min_p > 1.0:
+                warnings.warn(f"Invalid min_p value: {min_p}. Skipping parameter.")
+            else:
+                validated["min_p"] = min_p
+
+        # top_a: 0.0 to 1.0
+        if "top_a" in hyperparameters:
+            top_a = hyperparameters["top_a"]
+            if not isinstance(top_a, (int, float)) or top_a < 0.0 or top_a > 1.0:
+                warnings.warn(f"Invalid top_a value: {top_a}. Skipping parameter.")
+            else:
+                validated["top_a"] = top_a
+
         return validated
 
     def get_parameter_ranges(self) -> Dict[str, Dict[str, float]]:
@@ -153,6 +229,10 @@ class OpenRouterProvider(BaseProvider):
             {
                 "frequency_penalty": {"min": -2.0, "max": 2.0},
                 "presence_penalty": {"min": -2.0, "max": 2.0},
+                "top_k": {"min": 0, "max": 100},
+                "repetition_penalty": {"min": 0.0, "max": 2.0},
+                "min_p": {"min": 0.0, "max": 1.0},
+                "top_a": {"min": 0.0, "max": 1.0},
             }
         )
         return ranges
