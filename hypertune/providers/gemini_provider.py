@@ -8,7 +8,8 @@ import warnings
 from .base import BaseProvider
 
 try:
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
 
     GOOGLE_AI_AVAILABLE = True
 except ImportError:
@@ -25,11 +26,11 @@ class GeminiProvider(BaseProvider):
         Initialize Google Gemini provider
 
         Args:
-            model: Model to use (default: gemini-1.5-pro)
+            model: Model to use (default: gemini-2.5-pro)
         """
         if not GOOGLE_AI_AVAILABLE:
             raise ImportError(
-                "google-generativeai package is required. Install with: pip install google-generativeai"
+                "google-genai package is required. Install with: pip install google-genai"
             )
 
         super().__init__(model)
@@ -37,8 +38,7 @@ class GeminiProvider(BaseProvider):
         if not api_key:
             raise ValueError("GOOGLE_API_KEY environment variable is required")
 
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(self.model)
+        self.client = genai.Client(api_key=api_key)
 
     def generate(self, prompt: str, **hyperparameters) -> str:
         """
@@ -54,16 +54,17 @@ class GeminiProvider(BaseProvider):
         validated_params = self.validate_hyperparameters(**hyperparameters)
 
         try:
-            # Create generation config
-            generation_config = genai.types.GenerationConfig(
+            config = types.GenerateContentConfig(
                 temperature=validated_params.get("temperature", 0.7),
                 top_p=validated_params.get("top_p", 0.9),
                 top_k=validated_params.get("top_k", 40),
                 max_output_tokens=validated_params.get("max_tokens", 1024),
             )
 
-            response = self.model.generate_content(
-                prompt, generation_config=generation_config
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=config,
             )
             return response.text
         except Exception as e:
@@ -93,6 +94,9 @@ class GeminiProvider(BaseProvider):
             "gemini-2.5-pro",
             "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
+            # Gemini 2.0 family
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-001",
             # Gemini 1.5 family (legacy)
             "gemini-1.5-pro",
             "gemini-1.5-flash",
