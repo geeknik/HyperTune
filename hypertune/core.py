@@ -1,6 +1,8 @@
 import math
 import random
+import re
 import string
+from collections import Counter
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -22,6 +24,40 @@ def get_embedding_model():
     if _embedding_model is None:
         _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
     return _embedding_model
+
+
+def compute_quality_penalty(text: str) -> float:
+    if not text or len(text.strip()) < 10:
+        return 0.0
+
+    chars = list(text)
+    if len(chars) < 20:
+        return 1.0
+
+    char_counts = Counter(chars)
+    most_common_char, most_common_count = char_counts.most_common(1)[0]
+    repetition_ratio = most_common_count / len(chars)
+
+    if repetition_ratio > 0.3 and most_common_char in ",.;!?'\"()-_\n\t ":
+        return max(0.0, 1.0 - repetition_ratio * 2)
+
+    repeat_sequences = re.findall(r"(.)\1{4,}", text)
+    if len(repeat_sequences) > 3:
+        return 0.2
+
+    words = text.split()
+    if len(words) >= 5:
+        word_counts = Counter(words)
+        _, top_count = word_counts.most_common(1)[0]
+        if top_count / len(words) > 0.4:
+            return 0.3
+
+    unique_chars = len(set(chars))
+    char_diversity = unique_chars / len(chars)
+    if char_diversity < 0.1 and len(chars) > 30:
+        return 0.1
+
+    return 1.0
 
 
 class HyperTune:
@@ -111,12 +147,16 @@ class HyperTune:
     def score(self, results):
         scored_results = []
         for result in results:
+            quality_penalty = compute_quality_penalty(result["text"])
             coherence_score = self.evaluate_coherence(result["text"])
             relevance_score = self.evaluate_relevance(result["text"], self.prompt)
             complexity_score = self.evaluate_complexity(result["text"])
-            total_score = (
+
+            raw_score = (
                 coherence_score * 0.4 + relevance_score * 0.4 + complexity_score * 0.2
             )
+            total_score = raw_score * quality_penalty
+
             scored_results.append(
                 {
                     "text": result["text"],
@@ -124,6 +164,7 @@ class HyperTune:
                     "coherence_score": coherence_score,
                     "relevance_score": relevance_score,
                     "complexity_score": complexity_score,
+                    "quality_penalty": quality_penalty,
                     "hyperparameters": result["hyperparameters"],
                 }
             )

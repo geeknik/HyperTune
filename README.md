@@ -5,11 +5,11 @@ HyperTune is an advanced tool for optimizing and analyzing text generation using
 ## Features
 
 - **Multi-Provider Support**: Works with OpenAI, Anthropic Claude, Google Gemini, and OpenRouter
-- Generate multiple responses to a given prompt using different hyperparameter settings
-- Score responses based on coherence, relevance, and complexity
-- Analyze common themes and unique insights across responses
-- Visualize the impact of hyperparameters on response quality
-- Provide detailed explanations of scoring and recommendations for further tuning
+- **Semantic Scoring**: Uses sentence embeddings for accurate coherence and relevance measurement
+- **Quality Detection**: Automatically penalizes degenerate outputs (repetitive text, garbage responses)
+- **JSON Export**: Save full results with metadata for further analysis
+- **Interactive Dashboards**: Generate insightful visualizations of hyperparameter impact
+- **Flexible Output**: Control verbosity with truncation and top-N display options
 
 ## Supported Providers
 
@@ -33,19 +33,19 @@ HyperTune is an advanced tool for optimizing and analyzing text generation using
 ## Installation
 
 1. Clone this repository:
-   ```
+   ```bash
    git clone https://github.com/geeknik/hypertune
    cd hypertune
    python -m venv venv && source venv/bin/activate
    ```
 
 2. Install the required dependencies:
-   ```
-   pip install openai anthropic google-generativeai scikit-learn nltk matplotlib seaborn tabulate pandas sentence-transformers
+   ```bash
+   pip install openai anthropic google-genai scikit-learn nltk matplotlib seaborn pandas sentence-transformers
    ```
 
 3. Set up your API keys as environment variables:
-   ```
+   ```bash
    export OPENAI_API_KEY='your-openai-api-key-here'
    export ANTHROPIC_API_KEY='your-anthropic-api-key-here'
    export GOOGLE_API_KEY='your-google-api-key-here'
@@ -56,67 +56,99 @@ HyperTune is an advanced tool for optimizing and analyzing text generation using
 
 ### Basic Usage
 
-Run the CLI script with your desired prompt and number of iterations:
-
-```
+```bash
 python cli.py --prompt "Your prompt here" --iterations 10
 ```
 
-### Provider Selection
+### CLI Options
 
-Choose a specific LLM provider:
+| Option | Description |
+|--------|-------------|
+| `--prompt` | Input prompt for generation (required) |
+| `--iterations` | Number of iterations (default: 5) |
+| `--provider` | LLM provider: openai, anthropic, gemini, openrouter (default: openai) |
+| `--model` | Specific model to use (uses provider default if not specified) |
+| `--output FILE` | Save full results to JSON file |
+| `--top N` | Number of top results to display (default: 3) |
+| `--full` | Show full response text (default: truncated to 500 chars) |
+| `--no-charts` | Disable chart generation |
+| `--list-providers` | List available providers and models |
 
+### Examples
+
+```bash
+# Basic run with OpenAI
+python cli.py --prompt "Explain quantum computing" --iterations 10
+
+# Use Anthropic and save results
+python cli.py --prompt "Write a poem" --provider anthropic --output results.json
+
+# OpenRouter with specific model, show all responses
+python cli.py --prompt "Summarize AI" --provider openrouter --model meta-llama/llama-3.1-70b-instruct --top 10 --full
+
+# Quick run without charts
+python cli.py --prompt "Hello world" --iterations 3 --no-charts
 ```
-python cli.py --prompt "Your prompt here" --provider openai --iterations 10
-python cli.py --prompt "Your prompt here" --provider anthropic --iterations 10
-python cli.py --prompt "Your prompt here" --provider gemini --iterations 10
-python cli.py --prompt "Your prompt here" --provider openrouter --iterations 10
+
+## Output
+
+### Terminal Output
+
+The CLI displays:
+- Score breakdown for top responses (coherence, relevance, complexity, quality penalty)
+- Hyperparameters used for each response
+- Response text (truncated by default, use `--full` for complete text)
+- Score statistics (best, worst, mean, std)
+- Best performing hyperparameters
+
+### JSON Export
+
+Use `--output results.json` to save:
+```json
+{
+  "metadata": {
+    "timestamp": "2025-01-01T12:00:00",
+    "prompt": "Your prompt",
+    "provider": "openai",
+    "model": "gpt-4",
+    "iterations": 10
+  },
+  "results": [...],
+  "summary": {
+    "best_score": 0.85,
+    "best_hyperparameters": {...},
+    "scores_distribution": {"min": 0.2, "max": 0.85, "mean": 0.6}
+  }
+}
 ```
 
-### Model Selection
+### Visualizations
 
-Choose a specific model within a provider:
+Two charts are generated (disable with `--no-charts`):
 
-```
-python cli.py --prompt "Your prompt here" --provider openai --model gpt-4o-mini --iterations 10
-python cli.py --prompt "Your prompt here" --provider anthropic --model claude-3-haiku-20240307 --iterations 10
-python cli.py --prompt "Your prompt here" --provider openrouter --model meta-llama/llama-3.1-70b-instruct --iterations 10
-```
+**`hypertune_dashboard.png`** - Analysis dashboard with:
+- Score distribution histogram
+- Stacked score breakdown showing coherence/relevance/complexity contributions
+- Parameter correlation heatmap
+- Temperature vs score trend line
+- Best vs worst response comparison
 
-### List Available Providers and Models
-
-```
-python cli.py --list-providers
-```
-
-The script will generate responses, analyze them, and provide detailed output including:
-
-- Top 3 responses with score breakdowns
-- Key concepts and their frequencies
-- Unique insights from the responses
-- Hyperparameter analysis and trends
-- Recommendations for further tuning
-
-The script also generates several visualization charts:
-- `score_comparison.png`: Comparison of top 3 responses' scores
-- `word_frequency.png`: Bar chart of most frequent words
-- `hyperparameter_impact.png`: Scatter plots showing the impact of each hyperparameter on the total score
+**`hyperparameter_exploration.png`** - Detailed parameter analysis:
+- Scatter plots with trend lines and correlation coefficients
+- Box plots showing score variance by parameter range
 
 ## How It Works
 
-HyperTune uses a combination of natural language processing techniques and machine learning to generate and analyze text responses:
+1. **Generation**: Multiple responses are generated using random hyperparameter combinations within valid ranges for your chosen provider.
 
-1. It generates multiple responses using your chosen LLM provider with varying hyperparameters.
-2. Each response is scored based on coherence, relevance to the prompt, and language complexity.
-3. The tool then analyzes the responses collectively to identify common themes, unique insights, and the impact of different hyperparameters.
-4. Finally, it provides a comprehensive report with visualizations to help understand the results.
+2. **Scoring**: Each response is scored on three dimensions using sentence embeddings (all-MiniLM-L6-v2):
+   - **Coherence (40%)**: Semantic similarity between consecutive sentences
+   - **Relevance (40%)**: Semantic similarity between response and prompt
+   - **Complexity (20%)**: Vocabulary diversity, word length, sentence structure
 
-![hyperparameter_impact](https://github.com/user-attachments/assets/73490098-4333-479f-9b3f-094944b34acd)
+3. **Quality Filtering**: Degenerate responses (repetitive characters, word spam, low diversity) receive a quality penalty that reduces their total score.
 
-![word_frequency](https://github.com/user-attachments/assets/e0cd3271-78d3-406e-98a6-b39e75205dbf)
-
-![score_comparison](https://github.com/user-attachments/assets/e6ad5ace-2632-404f-99c7-c50a88d328f7)
-
+4. **Analysis**: Results are sorted by score and analyzed to identify optimal hyperparameter combinations.
 
 ## Contributing
 
