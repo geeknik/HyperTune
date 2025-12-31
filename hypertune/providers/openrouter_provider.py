@@ -27,7 +27,14 @@ class OpenRouterProvider(BaseProvider):
         if not api_key:
             raise ValueError("OPENROUTER_API_KEY environment variable is required")
 
-        self.client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+            default_headers={
+                "HTTP-Referer": "https://github.com/geeknik/HyperTune",
+                "X-Title": "HyperTune",
+            },
+        )
 
     def generate(self, prompt: str, **hyperparameters) -> str:
         """
