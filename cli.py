@@ -355,7 +355,15 @@ def create_hyperparameter_exploration(results, output_dir="."):
         bins = pd.qcut(df[param], q=min(4, len(df) // 2), duplicates="drop")
         df_temp = df.copy()
         df_temp["bin"] = bins
-        sns.boxplot(data=df_temp, x="bin", y="total_score", ax=ax_box, palette="RdYlGn")
+        sns.boxplot(
+            data=df_temp,
+            x="bin",
+            y="total_score",
+            ax=ax_box,
+            hue="bin",
+            palette="RdYlGn",
+            legend=False,
+        )
         ax_box.set_xlabel(f"{param} Range")
         ax_box.set_ylabel("Score")
         ax_box.tick_params(axis="x", rotation=45)

@@ -26,36 +26,56 @@ def get_embedding_model():
     return _embedding_model
 
 
+def strip_markdown(text: str) -> str:
+    """Remove markdown formatting for cleaner text analysis."""
+    text = re.sub(r"\[\[\d+\]\]\([^)]+\)", "", text)  # [[1]](url)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)  # [text](url) -> text
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"\|[^\n]+\|", "", text)  # table rows
+    text = re.sub(r"\|-+\|", "", text)  # table separators
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)  # **bold**
+    text = re.sub(r"\*([^*]+)\*", r"\1", text)  # *italic*
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[-*]\s+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^>\s+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[-=*]{3,}\s*$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = re.sub(r" {2,}", " ", text)
+    return text.strip()
+
+
 def compute_quality_penalty(text: str) -> float:
+    """Detect degenerate LLM outputs. Returns 1.0 for good text, <1.0 for garbage."""
     if not text or len(text.strip()) < 10:
         return 0.0
 
-    chars = list(text)
-    if len(chars) < 20:
-        return 1.0
+    clean_text = strip_markdown(text)
+    if len(clean_text) < 20:
+        return 0.3 if len(text) > 100 else 1.0
 
+    chars = list(clean_text)
     char_counts = Counter(chars)
     most_common_char, most_common_count = char_counts.most_common(1)[0]
     repetition_ratio = most_common_count / len(chars)
 
-    if repetition_ratio > 0.3 and most_common_char in ",.;!?'\"()-_\n\t ":
+    if repetition_ratio > 0.4 and most_common_char in ",.;!?'\"()-_\n\t ":
         return max(0.0, 1.0 - repetition_ratio * 2)
 
-    repeat_sequences = re.findall(r"(.)\1{4,}", text)
-    if len(repeat_sequences) > 3:
+    # 8+ consecutive identical non-formatting chars (e.g., "aaaaaaaa")
+    repeat_sequences = re.findall(r"([^-=*_#|\s])\1{7,}", clean_text)
+    if len(repeat_sequences) > 2:
         return 0.2
 
-    words = text.split()
-    if len(words) >= 5:
-        word_counts = Counter(words)
+    words = clean_text.split()
+    if len(words) >= 10:
+        word_counts = Counter(w.lower() for w in words)
         _, top_count = word_counts.most_common(1)[0]
-        if top_count / len(words) > 0.4:
+        if top_count / len(words) > 0.5:
             return 0.3
 
     unique_chars = len(set(chars))
-    char_diversity = unique_chars / len(chars)
-    if char_diversity < 0.1 and len(chars) > 30:
-        return 0.1
+    if unique_chars < 25 and len(chars) > 100:
+        return 0.2
 
     return 1.0
 
@@ -174,7 +194,8 @@ class HyperTune:
         if not text or not text.strip():
             return 0.0
 
-        sentences = sent_tokenize(text)
+        clean_text = strip_markdown(text)
+        sentences = sent_tokenize(clean_text)
         if len(sentences) < 2:
             return 1.0
 
@@ -193,8 +214,8 @@ class HyperTune:
         return self._calibrate_coherence(raw_score)
 
     def _calibrate_coherence(self, raw_score):
-        baseline = 0.3
-        ceiling = 0.85
+        baseline = 0.15
+        ceiling = 0.70
         if raw_score <= baseline:
             return 0.0
         if raw_score >= ceiling:
@@ -205,8 +226,9 @@ class HyperTune:
         if not text or not text.strip() or not prompt or not prompt.strip():
             return 0.0
 
+        clean_text = strip_markdown(text)
         model = get_embedding_model()
-        embeddings = model.encode([prompt, text])
+        embeddings = model.encode([prompt, clean_text])
         raw_score = float(cosine_similarity([embeddings[0]], [embeddings[1]])[0][0])
         return self._calibrate_relevance(raw_score)
 
