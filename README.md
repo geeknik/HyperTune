@@ -133,9 +133,14 @@ Two charts are generated (disable with `--no-charts`):
 - Temperature vs score trend line
 - Best vs worst response comparison
 
+<img width="2098" height="1630" alt="image" src="https://github.com/user-attachments/assets/7fbd50b2-90e4-4403-b40d-4b99e8ab42cf" />
+
 **`hyperparameter_exploration.png`** - Detailed parameter analysis:
 - Scatter plots with trend lines and correlation coefficients
 - Box plots showing score variance by parameter range
+
+<img width="2979" height="1183" alt="image" src="https://github.com/user-attachments/assets/569a776c-244b-44b7-ba4e-79421fd8724b" />
+
 
 ## How It Works
 
