@@ -52,6 +52,15 @@ HyperTune is an advanced tool for optimizing and analyzing text generation using
    export OPENROUTER_API_KEY='your-openrouter-api-key-here'
    ```
 
+## Testing
+
+Run tests in a local virtual environment:
+
+```bash
+make setup
+make test
+```
+
 ## Usage
 
 ### Basic Usage
