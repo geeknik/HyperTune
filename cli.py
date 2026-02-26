@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import sys
 from collections import Counter
 from datetime import datetime
@@ -11,17 +12,13 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import nltk
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from hypertune.core import HyperTune
-
-nltk.download("punkt", quiet=True)
-nltk.download("stopwords", quiet=True)
-nltk.download("punkt_tab", quiet=True)
+from hypertune.nltk_utils import ensure_nltk_resources
 
 RESPONSE_PREVIEW_LENGTH = 500
 
@@ -49,6 +46,7 @@ def format_hyperparameters(hyperparams):
 
 
 def extract_common_terms(results, top_n=10):
+    ensure_nltk_resources(("punkt", "punkt_tab", "stopwords"))
     all_text = " ".join([result["text"] for result in results])
     words = word_tokenize(all_text.lower())
     stop_words = set(stopwords.words("english"))
@@ -509,8 +507,12 @@ Examples:
     try:
         ht = HyperTune(args.prompt, args.iterations, args.provider, args.model)
         results = ht.run()
-    except Exception as e:
+    except (RuntimeError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception:
+        logging.exception("HyperTune execution failed")
+        print("Error: HyperTune execution failed.", file=sys.stderr)
         sys.exit(1)
 
     if not results:

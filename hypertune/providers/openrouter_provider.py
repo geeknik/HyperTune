@@ -1,13 +1,16 @@
-"""
-OpenRouter provider for HyperTune
-"""
+"""OpenRouter provider for HyperTune."""
 
+import logging
 import os
 import re
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 import warnings
-from .base import BaseProvider
+
 from openai import OpenAI
+
+from .base import BaseProvider
+
+logger = logging.getLogger(__name__)
 
 
 class OpenRouterProvider(BaseProvider):
@@ -86,8 +89,8 @@ class OpenRouterProvider(BaseProvider):
                 extra_body=extra_body if extra_body else None,
             )
             return response.choices[0].message.content
-        except Exception as e:
-            error_str = str(e)
+        except Exception as exc:
+            error_str = str(exc)
             if retry and "temperature must be within" in error_str:
                 match = re.search(
                     r"temperature must be within \[[\d.]+,\s*([\d.]+)\]", error_str
@@ -101,7 +104,8 @@ class OpenRouterProvider(BaseProvider):
                     return self._call_api(
                         prompt, validated_params, extra_body, clamped_temp, retry=False
                     )
-            raise RuntimeError(f"OpenRouter API error: {error_str}")
+            logger.exception("OpenRouter API request failed")
+            raise RuntimeError("OpenRouter API error") from exc
 
     def get_default_model(self) -> str:
         """

@@ -1,10 +1,10 @@
-"""
-Google Gemini provider for HyperTune
-"""
+"""Google Gemini provider for HyperTune."""
 
+import logging
 import os
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 import warnings
+
 from .base import BaseProvider
 
 try:
@@ -14,6 +14,8 @@ try:
     GOOGLE_AI_AVAILABLE = True
 except ImportError:
     GOOGLE_AI_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiProvider(BaseProvider):
@@ -67,8 +69,9 @@ class GeminiProvider(BaseProvider):
                 config=config,
             )
             return response.text
-        except Exception as e:
-            raise RuntimeError(f"Google Gemini API error: {str(e)}")
+        except Exception as exc:
+            logger.exception("Google Gemini API request failed")
+            raise RuntimeError("Google Gemini API error") from exc
 
     def get_default_model(self) -> str:
         """

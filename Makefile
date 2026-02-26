@@ -18,6 +18,7 @@ venv:
 setup: venv
 	@$(VENV_PIP) install --upgrade pip setuptools wheel
 	@$(VENV_PIP) install -e . pytest pytest-cov
+	@$(VENV_PYTHON) -c "import nltk; [nltk.download(r, quiet=True) for r in ('punkt', 'punkt_tab', 'stopwords')]"
 
 test: setup
 	@$(VENV_PYTEST) -q

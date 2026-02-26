@@ -1,10 +1,10 @@
-"""
-Anthropic Claude provider for HyperTune
-"""
+"""Anthropic Claude provider for HyperTune."""
 
+import logging
 import os
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 import warnings
+
 from .base import BaseProvider
 
 try:
@@ -13,6 +13,8 @@ try:
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 class AnthropicProvider(BaseProvider):
@@ -60,8 +62,9 @@ class AnthropicProvider(BaseProvider):
                 messages=[{"role": "user", "content": prompt}],
             )
             return response.content[0].text
-        except Exception as e:
-            raise RuntimeError(f"Anthropic API error: {str(e)}")
+        except Exception as exc:
+            logger.exception("Anthropic API request failed")
+            raise RuntimeError("Anthropic API error") from exc
 
     def get_default_model(self) -> str:
         """

@@ -1,10 +1,12 @@
-"""
-Factory for creating LLM provider instances
-"""
+"""Factory for creating LLM provider instances."""
 
+import logging
 from typing import Optional, List
+
 from .base import BaseProvider
 from .registry import ProviderRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class ProviderFactory:
@@ -69,7 +71,8 @@ class ProviderFactory:
         for provider_name in ProviderRegistry.list_providers():
             try:
                 all_info[provider_name] = ProviderFactory.get_provider_info(provider_name)
-            except Exception as e:
-                all_info[provider_name] = {'error': str(e)}
+            except Exception:
+                logger.exception("Failed to load provider info for %s", provider_name)
+                all_info[provider_name] = {"error": "Provider unavailable"}
 
         return all_info

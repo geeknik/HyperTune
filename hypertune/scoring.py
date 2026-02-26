@@ -4,7 +4,20 @@ from typing import Optional
 
 import nltk
 from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
+from .nltk_utils import ensure_nltk_resources
+
+SentenceTransformer = None
+
+
+def get_embedding_model():
+    global SentenceTransformer
+    if SentenceTransformer is None:
+        try:
+            from sentence_transformers import SentenceTransformer as _SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError("sentence-transformers is required for scoring") from exc
+        SentenceTransformer = _SentenceTransformer
+    return SentenceTransformer("all-MiniLM-L6-v2")
 
 
 def perplexity_score(text: str) -> Optional[float]:
@@ -23,6 +36,7 @@ def perplexity_score(text: str) -> Optional[float]:
     if not text or not text.strip():
         return None
 
+    ensure_nltk_resources(("punkt", "punkt_tab"))
     tokens = nltk.word_tokenize(text.lower())
     if len(tokens) < 2:
         return None
@@ -48,14 +62,26 @@ def semantic_coherence(text: str) -> float:
     Returns:
         Average cosine similarity between consecutive sentences
     """
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    if not text or not text.strip():
+        return 0.0
+
+    ensure_nltk_resources(("punkt", "punkt_tab"))
+    model = get_embedding_model()
     sentences = nltk.sent_tokenize(text)
+    if len(sentences) < 2:
+        return 1.0
+
     embeddings = model.encode(sentences)
+    if len(embeddings) < 2:
+        return 1.0
+
     scores = [
         cosine_similarity([embeddings[i]], [embeddings[i + 1]])[0][0]
         for i in range(len(embeddings) - 1)
     ]
-    return sum(scores) / len(scores)
+    if not scores:
+        return 0.0
+    return float(max(0.0, min(1.0, sum(scores) / len(scores))))
 
 
 def factual_accuracy(text: str) -> Optional[float]:
@@ -75,11 +101,12 @@ def factual_accuracy(text: str) -> Optional[float]:
     if not text or not text.strip():
         return None
 
+    ensure_nltk_resources(("punkt", "punkt_tab"))
     sentences = nltk.sent_tokenize(text)
     if len(sentences) < 2:
         return None
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = get_embedding_model()
     embeddings = model.encode(sentences)
 
     similarities = []

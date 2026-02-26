@@ -1,27 +1,27 @@
 import math
+import logging
 import random
 import re
 import string
 from collections import Counter
 
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
-import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
-from nltk.corpus import stopwords
-from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+from .nltk_utils import ensure_nltk_resources
 from .providers import ProviderFactory
 
-nltk.download("punkt", quiet=True)
-nltk.download("stopwords", quiet=True)
-nltk.download("punkt_tab", quiet=True)
-
 _embedding_model = None
+logger = logging.getLogger(__name__)
 
 
 def get_embedding_model():
     global _embedding_model
     if _embedding_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError("sentence-transformers is required for scoring") from exc
         _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
     return _embedding_model
 
@@ -93,7 +93,6 @@ class HyperTune:
         """
         self.prompt = prompt
         self.iterations = iterations
-        self.stop_words = set(stopwords.words("english"))
         self.provider = ProviderFactory.create_provider(provider, model)
 
     def generate(self):
@@ -106,7 +105,7 @@ class HyperTune:
         results = []
         parameter_ranges = self.provider.get_parameter_ranges()
 
-        for _ in range(self.iterations):
+        for iteration in range(self.iterations):
             # Generate random hyperparameters within provider's valid ranges
             hyperparameters = {}
 
@@ -157,8 +156,8 @@ class HyperTune:
                 results.append(
                     {"text": response_text, "hyperparameters": hyperparameters}
                 )
-            except Exception as e:
-                print(f"Error generating response: {e}")
+            except Exception:
+                logger.exception("Response generation failed for iteration %s", iteration + 1)
                 # Continue with next iteration
                 continue
 
@@ -194,6 +193,7 @@ class HyperTune:
         if not text or not text.strip():
             return 0.0
 
+        ensure_nltk_resources(("punkt", "punkt_tab"))
         clean_text = strip_markdown(text)
         sentences = sent_tokenize(clean_text)
         if len(sentences) < 2:
@@ -245,6 +245,7 @@ class HyperTune:
         if not text or not text.strip():
             return 0.0
 
+        ensure_nltk_resources(("punkt", "punkt_tab"))
         words = word_tokenize(text.lower())
         words = [word for word in words if word not in string.punctuation]
 

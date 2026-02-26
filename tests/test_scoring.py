@@ -43,6 +43,15 @@ class TestPerplexityScore:
 
 
 class TestSemanticCoherence:
+    @patch("hypertune.scoring.nltk")
+    def test_semantic_coherence_single_sentence(self, mock_nltk):
+        mock_nltk.sent_tokenize.return_value = ["Only one sentence."]
+
+        from hypertune.scoring import semantic_coherence
+
+        result = semantic_coherence("Only one sentence.")
+        assert result == 1.0
+
     @patch("hypertune.scoring.SentenceTransformer")
     @patch("hypertune.scoring.nltk")
     def test_semantic_coherence_multiple_sentences(self, mock_nltk, mock_transformer):

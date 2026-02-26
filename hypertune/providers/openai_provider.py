@@ -1,12 +1,14 @@
-"""
-OpenAI provider for HyperTune
-"""
+"""OpenAI provider for HyperTune."""
 
-import os
-from typing import Dict, Any, List
+import logging
+from typing import Any, Dict, List
 import warnings
-from .base import BaseProvider
+
 from openai import OpenAI
+
+from .base import BaseProvider
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider(BaseProvider):
@@ -51,8 +53,9 @@ class OpenAIProvider(BaseProvider):
                 presence_penalty=validated_params.get("presence_penalty", 0.0),
             )
             return response.choices[0].message.content
-        except Exception as e:
-            raise RuntimeError(f"OpenAI API error: {str(e)}")
+        except Exception as exc:
+            logger.exception("OpenAI API request failed")
+            raise RuntimeError("OpenAI API error") from exc
 
     def get_default_model(self) -> str:
         """
